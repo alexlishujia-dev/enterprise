@@ -1,0 +1,61 @@
+@use './styles/variables' as vars;
+@use './styles/responsive' as resp;
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: vars.$bg-color;
+  color: vars.$text-color;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.page-container {
+  padding: 16px;
+
+  @include resp.tablet-up {
+    padding: 24px;
+  }
+}
+
+.page-container .toolbar {
+  margin-bottom: 16px;
+}
+
+.page-card {
+  border-radius: 8px;
+}
+
+.page-card .toolbar {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 767px) {
+  .page-container .toolbar nz-space {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+.text-secondary {
+  color: vars.$text-secondary;
+}
+
+.role-checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.role-checkbox {
+  display: flex;
+  margin-left: 0 !important;
+}

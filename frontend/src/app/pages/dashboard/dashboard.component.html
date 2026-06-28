@@ -1,0 +1,42 @@
+<div class="page-container">
+  <app-page-header title="工作台" subtitle="EnterprisePlatform 自适应管理后台"></app-page-header>
+
+  <div nz-row [nzGutter]="[16, 16]">
+    <div nz-col [nzXs]="24" [nzSm]="12" [nzLg]="8">
+      <nz-card class="stat-card">
+        <nz-statistic nzTitle="当前用户" [nzValue]="auth.user()?.userName || '-'"></nz-statistic>
+      </nz-card>
+    </div>
+    <div nz-col [nzXs]="24" [nzSm]="12" [nzLg]="8">
+      <nz-card class="stat-card">
+        <nz-statistic nzTitle="角色数量" [nzValue]="auth.user()?.roles?.length || 0"></nz-statistic>
+      </nz-card>
+    </div>
+    <div nz-col [nzXs]="24" [nzSm]="24" [nzLg]="8">
+      <nz-card class="stat-card" nzTitle="我的角色">
+        <div class="role-tags">
+          @for (role of auth.user()?.roles || []; track role) {
+            <nz-tag nzColor="blue">{{ role }}</nz-tag>
+          } @empty {
+            <span class="text-secondary">暂无角色</span>
+          }
+        </div>
+      </nz-card>
+    </div>
+  </div>
+
+  @if (quickLinks().length > 0) {
+    <nz-card class="intro-card page-card" nzTitle="快捷入口">
+      <div nz-row [nzGutter]="[12, 12]">
+        @for (link of quickLinks(); track link.path) {
+          <div nz-col [nzXs]="12" [nzSm]="6">
+            <a class="quick-link" [routerLink]="link.path">
+              <span nz-icon [nzType]="link.icon" nzTheme="outline"></span>
+              {{ link.title }}
+            </a>
+          </div>
+        }
+      </div>
+    </nz-card>
+  }
+</div>

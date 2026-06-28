@@ -1,0 +1,78 @@
+# 示例应用 Deployment - 替换 IMAGE 与域名后 kubectl apply -f
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enterprise-app
+  namespace: enterprise-platform
+  labels:
+    app: enterprise-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: enterprise-app
+  template:
+    metadata:
+      labels:
+        app: enterprise-app
+    spec:
+      containers:
+        - name: app
+          # 使用 Jenkins 构建并 push 到私有/阿里云镜像仓库
+          image: registry.cn-hangzhou.aliyuncs.com/YOUR_NAMESPACE/enterprise-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: enterprise-app
+  namespace: enterprise-platform
+spec:
+  selector:
+    app: enterprise-app
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: enterprise-app
+  namespace: enterprise-platform
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: app.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: enterprise-app
+                port:
+                  number: 80

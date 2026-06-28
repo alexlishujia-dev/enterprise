@@ -1,0 +1,14 @@
+**/.git
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.user
+**/launchSettings.json
+README.md
+docker-compose*.yml
+Dockerfile
+.dockerignore

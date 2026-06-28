@@ -1,0 +1,77 @@
+<div class="page-container">
+  <app-page-header [title]="pageTitle" [subtitle]="isEdit ? '修改用户基本信息' : '填写用户基本信息'">
+    <a routerLink="/system/users">返回列表</a>
+  </app-page-header>
+
+  <nz-card class="page-card form-page-card" [nzLoading]="loading">
+    <form nz-form [formGroup]="form" nzLayout="vertical" class="form-page">
+      <div class="form-page-grid">
+        <nz-form-item class="form-page-full avatar-upload-item">
+          <nz-form-label>头像</nz-form-label>
+          <nz-form-control>
+            <nz-upload
+              nzListType="picture-card"
+              [nzShowUploadList]="{ showPreviewIcon: true, showRemoveIcon: true, showDownloadIcon: false }"
+              [nzFileList]="avatarFileList"
+              [nzBeforeUpload]="beforeAvatarUpload"
+              [nzRemove]="removeAvatar"
+              [nzAccept]="'image/*'"
+              [nzDisabled]="uploadingAvatar">
+              @if (avatarFileList.length === 0) {
+                <div class="avatar-upload-trigger">
+                  <span nz-icon [nzType]="uploadingAvatar ? 'loading' : 'plus'"></span>
+                  <div class="avatar-upload-text">上传头像</div>
+                </div>
+              }
+            </nz-upload>
+            <div class="form-hint">支持 JPG、PNG、GIF、WEBP，大小不超过 2MB</div>
+          </nz-form-control>
+        </nz-form-item>
+
+        <nz-form-item>
+          <nz-form-label nzRequired>用户名</nz-form-label>
+          <nz-form-control nzErrorTip="请输入用户名">
+            <input nz-input formControlName="userName" placeholder="请输入用户名" [readonly]="isEdit" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label [nzRequired]="!isEdit">密码</nz-form-label>
+          <nz-form-control nzErrorTip="密码至少 6 位">
+            <input
+              nz-input
+              type="password"
+              formControlName="password"
+              [placeholder]="isEdit ? '留空则不修改' : '请输入密码'" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>显示名</nz-form-label>
+          <nz-form-control>
+            <input nz-input formControlName="displayName" placeholder="可选" />
+          </nz-form-control>
+        </nz-form-item>
+        <nz-form-item>
+          <nz-form-label>邮箱</nz-form-label>
+          <nz-form-control nzErrorTip="邮箱格式不正确">
+            <input nz-input formControlName="email" placeholder="可选" />
+          </nz-form-control>
+        </nz-form-item>
+        @if (isEdit) {
+          <nz-form-item>
+            <nz-form-label>启用</nz-form-label>
+            <nz-form-control>
+              <nz-switch formControlName="isActive"></nz-switch>
+            </nz-form-control>
+          </nz-form-item>
+        }
+      </div>
+
+      <div class="form-page-actions">
+        <nz-space>
+          <button *nzSpaceItem nz-button nzType="primary" [nzLoading]="saving" (click)="submit()">保存</button>
+          <a *nzSpaceItem nz-button routerLink="/system/users">取消</a>
+        </nz-space>
+      </div>
+    </form>
+  </nz-card>
+</div>

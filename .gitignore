@@ -1,0 +1,34 @@
+# EnterprisePlatform 根目录 .gitignore
+# 后端 .NET + 前端 Angular + 移动端 UniApp
+
+# ---------- .NET 后端 ----------
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.db
+*.db-shm
+*.db-wal
+appsettings.*.local.json
+logs/
+uploads/
+
+# ---------- 前端 Angular ----------
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# ---------- 移动端 UniApp ----------
+mobile/node_modules/
+mobile/dist/
+mobile/unpackage/
+mobile/.hbuilderx/
+
+# ---------- 通用 ----------
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.local
+.env.*.local

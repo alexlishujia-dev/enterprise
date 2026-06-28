@@ -1,0 +1,13 @@
+{
+  "/api": {
+    "target": "https://localhost:7088",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
+  "/uploads": {
+    "target": "https://localhost:7088",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

@@ -1,0 +1,32 @@
+<div class="page-container">
+  <app-page-header [title]="'分配角色 - ' + userName" subtitle="为用户勾选可访问的角色">
+    <a routerLink="/system/users">返回列表</a>
+  </app-page-header>
+
+  <nz-card class="page-card form-page-card">
+    <nz-spin [nzSpinning]="loading">
+      @if (allRoles.length === 0 && !loading) {
+        <span class="text-secondary">暂无可用角色，请先在角色管理创建</span>
+      } @else {
+        <div class="role-checkbox-list">
+          @for (role of allRoles; track role.id) {
+            <label
+              nz-checkbox
+              class="role-checkbox"
+              [ngModel]="isRoleSelected(role.id)"
+              (ngModelChange)="toggleRole(role.id, $event)">
+              {{ role.roleName }}（{{ role.roleCode }}）
+            </label>
+          }
+        </div>
+      }
+
+      <div class="form-page-actions">
+        <nz-space>
+          <button *nzSpaceItem nz-button nzType="primary" [nzLoading]="saving" (click)="submit()">保存</button>
+          <a *nzSpaceItem nz-button routerLink="/system/users">取消</a>
+        </nz-space>
+      </div>
+    </nz-spin>
+  </nz-card>
+</div>

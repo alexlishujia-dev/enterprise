@@ -1,0 +1,87 @@
+.app-layout {
+  min-height: 100vh;
+}
+
+.main-column {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-sider .logo {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-header {
+  background: #fff;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-dropdown {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.username {
+  margin-left: 8px;
+}
+
+.app-tabs {
+  background: #fff;
+  padding: 0 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+:host ::ng-deep .app-tabs .ant-tabs-nav {
+  margin-bottom: 0;
+}
+
+:host ::ng-deep .app-tabs .ant-tabs-tab {
+  padding: 8px 16px;
+}
+
+.app-content {
+  margin: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 767px) {
+  .username {
+    display: none;
+  }
+
+  .app-content {
+    margin: 8px;
+  }
+
+  .app-tabs {
+    padding: 0 8px;
+    overflow-x: auto;
+  }
+}

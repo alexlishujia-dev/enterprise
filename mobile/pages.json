@@ -1,0 +1,76 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^u-(.*)": "uview-plus/components/u-$1/u-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarTitleText": "登录",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "工作台",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/system/user-list/user-list",
+      "style": {
+        "navigationBarTitleText": "用户管理",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/system/user-detail/user-detail",
+      "style": {
+        "navigationBarTitleText": "用户详情"
+      }
+    },
+    {
+      "path": "pages/system/user-form/user-form",
+      "style": {
+        "navigationBarTitleText": "新建用户"
+      }
+    },
+    {
+      "path": "pages/system/role-list/role-list",
+      "style": {
+        "navigationBarTitleText": "角色管理",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/system/role-form/role-form",
+      "style": {
+        "navigationBarTitleText": "新建角色"
+      }
+    },
+    {
+      "path": "pages/system/log-list/log-list",
+      "style": {
+        "navigationBarTitleText": "操作日志",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/mine/mine",
+      "style": {
+        "navigationBarTitleText": "我的",
+        "navigationStyle": "custom"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "EnterprisePlatform",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f5f6f8"
+  }
+}

@@ -1,0 +1,115 @@
+<div class="page-container">
+  <app-page-header
+    title="角色权限"
+    subtitle="树形结构分配菜单与功能权限，支持级联勾选与搜索">
+  </app-page-header>
+
+  <div nz-row [nzGutter]="16" class="assign-layout">
+    <div nz-col [nzXs]="24" [nzMd]="8" [nzLg]="6">
+      <nz-card class="role-panel page-card" nzTitle="选择角色">
+        <input
+          nz-input
+          placeholder="搜索角色编码/名称"
+          [ngModel]="roleKeyword()"
+          (ngModelChange)="roleKeyword.set($event)"
+          class="role-search" />
+        <nz-spin [nzSpinning]="roleLoading">
+          <div class="role-list">
+            @for (role of filteredRoles(); track role.id) {
+              <div
+                class="role-item"
+                [class.active]="selectedRoleId() === role.id"
+                (click)="selectRole(role)">
+                <div class="role-item-main">
+                  <strong>{{ role.roleName }}</strong>
+                  <span class="role-code">{{ role.roleCode }}</span>
+                </div>
+                <nz-tag [nzColor]="role.isActive ? 'success' : 'default'">
+                  {{ role.isActive ? '启用' : '禁用' }}
+                </nz-tag>
+              </div>
+            } @empty {
+              <nz-empty nzNotFoundContent="暂无角色"></nz-empty>
+            }
+          </div>
+        </nz-spin>
+      </nz-card>
+    </div>
+
+    <div nz-col [nzXs]="24" [nzMd]="16" [nzLg]="18">
+      <nz-card class="perm-panel page-card">
+        <div class="perm-header">
+          <div>
+            <h3 class="perm-title">
+              @if (selectedRole(); as role) {
+                {{ role.roleName }}（{{ role.roleCode }}）
+              } @else {
+                请选择角色
+              }
+            </h3>
+            <span class="perm-stats">
+              已选 <strong>{{ selectedCount() }}</strong> / 共 {{ totalPermissionCount() }} 项功能权限
+              @if (dirty) {
+                <nz-tag nzColor="warning">未保存</nz-tag>
+              }
+            </span>
+          </div>
+          <div class="perm-actions">
+            <button nz-button (click)="expandAll()">全部展开</button>
+            <button nz-button (click)="collapseAll()">全部收起</button>
+            <button nz-button (click)="selectAll()" [disabled]="selectedRoleId() == null">全选</button>
+            <button nz-button (click)="clearAll()" [disabled]="selectedRoleId() == null">清空</button>
+            <button nz-button (click)="resetCurrent()" [disabled]="selectedRoleId() == null">重置</button>
+            <button
+              nz-button
+              nzType="primary"
+              [nzLoading]="saving"
+              [disabled]="selectedRoleId() == null || !dirty"
+              (click)="save()"
+              *appHasPermission="'system.role-permissions:assign'">
+              保存权限
+            </button>
+          </div>
+        </div>
+
+        <input
+          nz-input
+          placeholder="搜索菜单/权限名称或编码"
+          [ngModel]="permKeyword()"
+          (ngModelChange)="onPermKeywordChange($event)"
+          class="perm-search" />
+
+        <nz-spin [nzSpinning]="permLoading">
+          @if (selectedRoleId() == null) {
+            <nz-empty nzNotFoundContent="请从左侧选择角色"></nz-empty>
+          } @else if (displayTreeData().length === 0) {
+            <nz-empty nzNotFoundContent="无匹配的权限项"></nz-empty>
+          } @else {
+            <div class="perm-scroll">
+              <nz-tree
+                nzCheckable
+                nzShowIcon
+                nzBlockNode
+                [nzData]="displayTreeData()"
+                [nzCheckedKeys]="checkedKeys()"
+                [nzExpandedKeys]="expandedKeys()"
+                (nzCheckedKeysChange)="onCheckedKeysChange($event)"
+                (nzExpandedKeysChange)="expandedKeys.set($event)">
+                <ng-template #nzTreeTemplate let-node>
+                  @if (node.origin?.['permissionCode']) {
+                    <span class="tree-node-title">
+                      {{ node.title }}
+                      <span class="tree-node-code">{{ node.origin['permissionCode'] }}</span>
+                    </span>
+                  } @else {
+                    <span class="tree-node-title">{{ node.title }}</span>
+                  }
+                </ng-template>
+              </nz-tree>
+            </div>
+          }
+        </nz-spin>
+      </nz-card>
+    </div>
+  </div>
+</div>

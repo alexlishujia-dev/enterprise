@@ -1,0 +1,2 @@
+-- 为用户表添加头像字段
+ALTER TABLE sys_user ADD COLUMN IF NOT EXISTS AvatarUrl VARCHAR(512) NULL;

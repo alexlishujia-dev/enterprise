@@ -1,0 +1,185 @@
+<div class="page-container">
+
+  <app-page-header title="用户管理" subtitle="系统用户 CRUD、角色分配"></app-page-header>
+
+
+
+  <nz-card class="page-card">
+
+    <div class="toolbar">
+
+      <nz-space>
+
+        <input *nzSpaceItem nz-input placeholder="搜索用户名" [(ngModel)]="keyword" (keyup.enter)="search()" />
+
+        <button *nzSpaceItem nz-button (click)="search()">查询</button>
+
+        <button *nzSpaceItem nz-button (click)="resetSearch()">重置</button>
+
+        <ng-container *nzSpaceItem>
+
+          <a nz-button nzType="primary" routerLink="/system/users/new" *appHasPermission="'system.users:create'">新建用户</a>
+
+        </ng-container>
+
+        <ng-container *nzSpaceItem>
+
+          <button
+
+            nz-button
+
+            (click)="exportExcel()"
+
+            [nzLoading]="exporting"
+
+            *appHasPermission="'system.users:export'">
+
+            <span nz-icon nzType="export"></span>
+
+            导出 Excel
+
+          </button>
+
+        </ng-container>
+
+      </nz-space>
+
+    </div>
+
+
+
+    <nz-table
+
+      [nzData]="items"
+
+      [nzLoading]="loading"
+
+      [nzFrontPagination]="false"
+
+      [nzTotal]="total"
+
+      [nzPageIndex]="pageIndex"
+
+      [nzPageSize]="pageSize"
+
+      [nzShowSizeChanger]="true"
+
+      [nzShowTotal]="totalTemplate"
+
+      (nzQueryParams)="onQueryParamsChange($event)"
+
+      [nzScroll]="{ x: '1080px' }">
+
+      <thead>
+
+        <tr>
+
+          <th>ID</th>
+
+          <th nzWidth="72px">头像</th>
+
+          <th>用户名</th>
+
+          <th>显示名</th>
+
+          <th>邮箱</th>
+
+          <th>状态</th>
+
+          <th>角色</th>
+
+          <th>创建时间</th>
+
+          <th nzWidth="220px">操作</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+        @for (item of items; track item.id) {
+
+          <tr>
+
+            <td>{{ item.id }}</td>
+
+            <td>
+              <nz-avatar [nzSrc]="resolveAssetUrl(item.avatarUrl)" nzIcon="user"></nz-avatar>
+            </td>
+
+            <td>{{ item.userName }}</td>
+
+            <td>{{ item.displayName || '-' }}</td>
+
+            <td>{{ item.email || '-' }}</td>
+
+            <td>
+
+              <nz-tag [nzColor]="item.isActive ? 'success' : 'default'">
+
+                {{ item.isActive ? '启用' : '禁用' }}
+
+              </nz-tag>
+
+            </td>
+
+            <td>
+
+              @for (role of item.roles; track role) {
+
+                <nz-tag>{{ role }}</nz-tag>
+
+              } @empty {
+
+                <span class="text-secondary">-</span>
+
+              }
+
+            </td>
+
+            <td>{{ formatDateTime(item.createdAt) }}</td>
+
+            <td>
+
+              <a nz-button nzType="link" [routerLink]="['/system/users', item.id, 'edit']" *appHasPermission="'system.users:edit'">编辑</a>
+
+              <a nz-button nzType="link" [routerLink]="['/system/users', item.id, 'assign-roles']" *appHasPermission="'system.users:assign-roles'">分配角色</a>
+
+              <button
+
+                nz-button
+
+                nzType="link"
+
+                nzDanger
+
+                nz-popconfirm
+
+                nzPopconfirmTitle="确认删除该用户？"
+
+                (nzOnConfirm)="deleteUser(item.id)"
+
+                *appHasPermission="'system.users:delete'">
+
+                删除
+
+              </button>
+
+            </td>
+
+          </tr>
+
+        }
+
+      </tbody>
+
+    </nz-table>
+
+    <ng-template #totalTemplate let-total>共 {{ total }} 条</ng-template>
+
+  </nz-card>
+
+</div>
+
+

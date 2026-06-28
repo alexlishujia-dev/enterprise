@@ -1,0 +1,81 @@
+<div class="page-container">
+  <app-page-header title="角色管理" subtitle="系统角色 CRUD"></app-page-header>
+
+  <nz-card class="page-card">
+    <div class="toolbar">
+      <nz-space>
+        <input *nzSpaceItem nz-input placeholder="搜索角色" [(ngModel)]="keyword" (keyup.enter)="search()" />
+        <button *nzSpaceItem nz-button (click)="search()">查询</button>
+        <button *nzSpaceItem nz-button (click)="resetSearch()">重置</button>
+        <ng-container *nzSpaceItem>
+          <a nz-button nzType="primary" routerLink="/system/roles/new" *appHasPermission="'system.roles:create'">新建角色</a>
+        </ng-container>
+        <ng-container *nzSpaceItem>
+          <button
+            nz-button
+            (click)="exportExcel()"
+            [nzLoading]="exporting"
+            *appHasPermission="'system.roles:export'">
+            <span nz-icon nzType="export"></span>
+            导出 Excel
+          </button>
+        </ng-container>
+      </nz-space>
+    </div>
+
+    <nz-table
+      [nzData]="items"
+      [nzLoading]="loading"
+      [nzFrontPagination]="false"
+      [nzTotal]="total"
+      [nzPageIndex]="pageIndex"
+      [nzPageSize]="pageSize"
+      [nzShowSizeChanger]="true"
+      [nzShowTotal]="totalTemplate"
+      (nzQueryParams)="onQueryParamsChange($event)"
+      [nzScroll]="{ x: '900px' }">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>角色编码</th>
+          <th>角色名称</th>
+          <th>描述</th>
+          <th>状态</th>
+          <th>创建时间</th>
+          <th nzWidth="140px">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items; track item.id) {
+          <tr>
+            <td>{{ item.id }}</td>
+            <td>{{ item.roleCode }}</td>
+            <td>{{ item.roleName }}</td>
+            <td>{{ item.description || '-' }}</td>
+            <td>
+              <nz-tag [nzColor]="item.isActive ? 'success' : 'default'">
+                {{ item.isActive ? '启用' : '禁用' }}
+              </nz-tag>
+            </td>
+            <td>{{ formatDateTime(item.createdAt) }}</td>
+            <td>
+              <a nz-button nzType="link" [routerLink]="['/system/roles', item.id, 'edit']" *appHasPermission="'system.roles:edit'">编辑</a>
+              <button
+                nz-button
+                nzType="link"
+                nzDanger
+                nz-popconfirm
+                nzPopconfirmTitle="确认删除该角色？"
+                (nzOnConfirm)="deleteRole(item.id)"
+                *appHasPermission="'system.roles:delete'">
+                删除
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+    <ng-template #totalTemplate let-total>共 {{ total }} 条</ng-template>
+  </nz-card>
+</div>
+

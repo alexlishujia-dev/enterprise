@@ -1,0 +1,65 @@
+<div class="page-container">
+  <app-page-header title="操作日志" subtitle="API 操作审计记录"></app-page-header>
+
+  <nz-card class="page-card">
+    <div class="toolbar">
+      <nz-space>
+        <input *nzSpaceItem nz-input placeholder="模块名" [(ngModel)]="module" (keyup.enter)="search()" />
+        <button *nzSpaceItem nz-button (click)="search()">查询</button>
+        <button *nzSpaceItem nz-button (click)="resetSearch()">重置</button>
+        <ng-container *nzSpaceItem>
+          <button
+            nz-button
+            (click)="exportExcel()"
+            [nzLoading]="exporting"
+            *appHasPermission="'system.logs:export'">
+            <span nz-icon nzType="export"></span>
+            导出 Excel
+          </button>
+        </ng-container>
+      </nz-space>
+    </div>
+
+    <nz-table
+      [nzData]="items"
+      [nzLoading]="loading"
+      [nzFrontPagination]="false"
+      [nzTotal]="total"
+      [nzPageIndex]="pageIndex"
+      [nzPageSize]="pageSize"
+      [nzShowSizeChanger]="true"
+      [nzShowTotal]="totalTemplate"
+      (nzQueryParams)="onQueryParamsChange($event)"
+      [nzScroll]="{ x: '1200px' }">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>用户</th>
+          <th>模块</th>
+          <th>方法</th>
+          <th>路径</th>
+          <th>状态码</th>
+          <th>耗时(ms)</th>
+          <th>IP</th>
+          <th>时间</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items; track item.id) {
+          <tr>
+            <td>{{ item.id }}</td>
+            <td>{{ item.userName || '-' }}</td>
+            <td>{{ item.module }}</td>
+            <td><nz-tag>{{ item.httpMethod }}</nz-tag></td>
+            <td [title]="item.requestPath">{{ truncate(item.requestPath, 40) }}</td>
+            <td><nz-tag [nzColor]="statusColor(item.statusCode)">{{ item.statusCode }}</nz-tag></td>
+            <td>{{ item.durationMs }}</td>
+            <td>{{ item.ipAddress || '-' }}</td>
+            <td>{{ formatDateTime(item.createdAt) }}</td>
+          </tr>
+        }
+      </tbody>
+    </nz-table>
+    <ng-template #totalTemplate let-total>共 {{ total }} 条</ng-template>
+  </nz-card>
+</div>

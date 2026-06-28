@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: platform123
+      POSTGRES_DB: enterprise
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./database/postgresql/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./database/postgresql/02_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform -d enterprise"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      Database__Provider: PostgreSql
+      Database__ConnectionString: "Host=postgres;Port=5432;Database=enterprise;Username=platform;Password=platform123"
+      Jwt__SecretKey: "EnterprisePlatform-Prod-Secret-Key-Change-Me-32chars!"
+      Jwt__Issuer: EnterprisePlatform
+      Jwt__Audience: EnterprisePlatform.Client
+      Jwt__ExpireMinutes: 120
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  pg-data:

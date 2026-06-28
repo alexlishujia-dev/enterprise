@@ -1,0 +1,47 @@
+<div class="login-page">
+  <div class="login-shell">
+    <aside class="login-brand">
+      <div class="brand-badge">EP</div>
+      <h1 class="brand-title">{{ appTitle }}</h1>
+      <p class="brand-desc">企业级通用管理后台</p>
+      <ul class="brand-features">
+        <li><span nz-icon nzType="check-circle" nzTheme="outline"></span> Angular + NG-ZORRO</li>
+        <li><span nz-icon nzType="check-circle" nzTheme="outline"></span> 对接 ADO.NET 后端</li>
+        <li><span nz-icon nzType="check-circle" nzTheme="outline"></span> PC / 平板 / 手机自适应</li>
+      </ul>
+    </aside>
+
+    <section class="login-panel">
+      <div class="panel-header">
+        <h2>欢迎登录</h2>
+        <p>请输入您的账号和密码</p>
+      </div>
+
+      <nz-spin [nzSpinning]="loading">
+        <form nz-form [formGroup]="form" nzLayout="vertical" (ngSubmit)="submit()" class="login-form">
+          <nz-form-item>
+            <nz-form-label nzRequired>用户名</nz-form-label>
+            <nz-form-control nzErrorTip="请输入用户名">
+              <nz-input-group nzPrefixIcon="user" nzSize="large">
+                <input nz-input formControlName="userName" placeholder="请输入用户名" />
+              </nz-input-group>
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item>
+            <nz-form-label nzRequired>密码</nz-form-label>
+            <nz-form-control nzErrorTip="请输入密码">
+              <nz-input-group nzPrefixIcon="lock" nzSize="large">
+                <input nz-input type="password" formControlName="password" placeholder="请输入密码" />
+              </nz-input-group>
+            </nz-form-control>
+          </nz-form-item>
+
+          <button nz-button nzType="primary" nzSize="large" nzBlock [disabled]="loading" class="login-btn">
+            登 录
+          </button>
+        </form>
+      </nz-spin>
+    </section>
+  </div>
+</div>

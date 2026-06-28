@@ -1,0 +1,55 @@
+<nz-layout class="app-layout">
+  <nz-sider
+    class="app-sider"
+    nzCollapsible
+    [(nzCollapsed)]="collapsed"
+    [nzTrigger]="null"
+    [nzWidth]="220"
+    [nzCollapsedWidth]="64"
+    [nzBreakpoint]="'lg'">
+    <div class="logo">{{ collapsed ? 'EP' : appTitle }}</div>
+    <ul nz-menu nzTheme="dark" nzMode="inline" [nzInlineCollapsed]="collapsed">
+      @for (item of menus(); track item.path) {
+        <li nz-menu-item [nzSelected]="isMenuActive(item.path)" [routerLink]="item.path">
+          <span nz-icon [nzType]="item.icon" nzTheme="outline"></span>
+          <span>{{ item.title }}</span>
+        </li>
+      }
+    </ul>
+  </nz-sider>
+
+  <nz-layout class="main-column">
+    <nz-header class="app-header">
+      <button nz-button nzType="text" class="trigger" (click)="toggleCollapsed()">
+        <span nz-icon [nzType]="collapsed ? 'menu-unfold' : 'menu-fold'"></span>
+      </button>
+
+      <div class="header-right user-dropdown" nz-dropdown [nzDropdownMenu]="userMenu">
+        <nz-avatar nzIcon="user"></nz-avatar>
+        <span class="username">{{ displayName() }}</span>
+      </div>
+      <nz-dropdown-menu #userMenu="nzDropdownMenu">
+        <ul nz-menu>
+          <li nz-menu-item (click)="logout()">退出登录</li>
+        </ul>
+      </nz-dropdown-menu>
+    </nz-header>
+
+    <div class="app-tabs">
+      <nz-tabset
+        nzType="editable-card"
+        nzHideAdd
+        [nzSelectedIndex]="selectedTabIndex()"
+        (nzSelectChange)="onTabSelect($event.index!)"
+        (nzClose)="onTabClose($event.index!)">
+        @for (tab of tabs(); track tab.path) {
+          <nz-tab [nzTitle]="tab.title" [nzClosable]="tab.closable"></nz-tab>
+        }
+      </nz-tabset>
+    </div>
+
+    <nz-content class="app-content">
+      <router-outlet />
+    </nz-content>
+  </nz-layout>
+</nz-layout>

@@ -1,0 +1,13 @@
+{
+  "name": "enterprise-platform-mobile",
+  "version": "1.0.0",
+  "description": "EnterprisePlatform UniApp 移动端（对接 ASP.NET Core + ADO.NET 后端）",
+  "scripts": {
+    "postinstall": "echo 请使用 HBuilderX 打开本项目并运行；CLI 用户可执行: npx @dcloudio/uvm@latest"
+  },
+  "dependencies": {
+    "crypto-js": "^4.2.0",
+    "pinia": "^2.3.1",
+    "uview-plus": "^3.4.38"
+  }
+}

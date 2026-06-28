@@ -1,0 +1,78 @@
+// Jenkins Pipeline 示例：GitHub 触发 → 构建 Docker 镜像 → 部署到 K3s
+// 在 Jenkins 中创建 Pipeline 任务，Pipeline script from SCM 指向本文件
+
+pipeline {
+    agent any
+
+    environment {
+        // 阿里云容器镜像仓库（国内 push/pull 稳定）
+        REGISTRY     = 'registry.cn-hangzhou.aliyuncs.com'
+        REGISTRY_NS  = 'your-namespace'          // 替换
+        IMAGE_NAME   = 'enterprise-app'
+        K8S_NAMESPACE = 'enterprise-platform'
+        K8S_DEPLOYMENT = 'enterprise-app'
+        // Jenkins 凭据 ID
+        DOCKER_CRED  = 'aliyun-registry-cred'    // Username/password
+        GIT_CRED     = 'github-token'
+    }
+
+    triggers {
+        githubPush()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                    # 若项目为 Maven/Spring Boot
+                    if [ -f pom.xml ]; then
+                        mvn -B clean package -DskipTests
+                    fi
+                '''
+            }
+        }
+
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    def tag = "${env.BUILD_NUMBER}-${env.GIT_COMMIT?.take(7) ?: 'latest'}"
+                    env.IMAGE_TAG = tag
+                    def fullImage = "${REGISTRY}/${REGISTRY_NS}/${IMAGE_NAME}:${tag}"
+
+                    docker.withRegistry("https://${REGISTRY}", DOCKER_CRED) {
+                        def img = docker.build(fullImage, '.')
+                        img.push()
+                        img.push('latest')
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to K3s') {
+            steps {
+                sh """
+                    export KUBECONFIG=\${HOME}/.kube/config
+                    kubectl set image deployment/${K8S_DEPLOYMENT} \
+                        app=${REGISTRY}/${REGISTRY_NS}/${IMAGE_NAME}:${IMAGE_TAG} \
+                        -n ${K8S_NAMESPACE} --record
+                    kubectl rollout status deployment/${K8S_DEPLOYMENT} -n ${K8S_NAMESPACE} --timeout=300s
+                """
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo '构建或部署失败，请检查 Jenkins 控制台日志'
+        }
+        success {
+            echo "部署成功: ${REGISTRY}/${REGISTRY_NS}/${IMAGE_NAME}:${env.IMAGE_TAG}"
+        }
+    }
+}

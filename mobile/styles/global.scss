@@ -1,0 +1,76 @@
+.page {
+  min-height: 100vh;
+  background: $uni-bg-color;
+  box-sizing: border-box;
+}
+
+.page-container {
+  padding: $page-padding;
+  box-sizing: border-box;
+}
+
+.page-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: $uni-text-color;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.page-subtitle {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: $uni-text-color-secondary;
+  line-height: 1.4;
+}
+
+.safe-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.section-title {
+  display: block;
+  margin: 8rpx 0 20rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: $uni-text-color;
+}
+
+.card {
+  background: #fff;
+  border-radius: $card-radius;
+  padding: $page-padding;
+  margin-bottom: 24rpx;
+  box-shadow: 0 8rpx 24rpx rgba(15, 23, 42, 0.04);
+  box-sizing: border-box;
+}
+
+.card--flat {
+  box-shadow: none;
+  border: 1rpx solid $uni-border-color;
+}
+
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.flex-1 {
+  flex: 1;
+  min-width: 0;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.muted {
+  color: $uni-text-color-secondary;
+  font-size: 26rpx;
+}
