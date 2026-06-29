@@ -8,7 +8,8 @@
 
 | 文档 | 说明 |
 |------|------|
-| **[docs/GITHUB_SSH_WINDOWS.md](docs/GITHUB_SSH_WINDOWS.md)** | **Windows 生成 SSH 密钥（新手逐步图解说明）** |
+| **[docs/GITHUB_SSH_JENKINS.md](docs/GITHUB_SSH_JENKINS.md)** | **Jenkins 服务器 SSH 密钥（详细步骤）** |
+| **[docs/GITHUB_SSH_WINDOWS.md](docs/GITHUB_SSH_WINDOWS.md)** | Windows 生成 SSH 密钥 |
 | **[docs/GITHUB_REPO_SETUP.md](docs/GITHUB_REPO_SETUP.md)** | **前端+后端 API 如何创建 GitHub 仓库** |
 | **[docs/BEGINNER_GUIDE.md](docs/BEGINNER_GUIDE.md)** | 各组件有什么用、整体流程（概念入门） |
 | **[docs/STEP_BY_STEP.md](docs/STEP_BY_STEP.md)** | **每一步详细说明：做什么、为什么、成功标志（新手强烈推荐）** |

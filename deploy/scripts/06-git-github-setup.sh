@@ -81,10 +81,18 @@ fi
 
 # -----------------------------------------------------------------------------
 # 4. 为 jenkins 生成 SSH 密钥（可选，使用 SSH 克隆时需要）
+# 必须先执行 04-jenkins-install.sh，jenkins 用户存在后才能生成
 # -----------------------------------------------------------------------------
 JENKINS_SSH_DIR="/var/lib/jenkins/.ssh"
-read -rp "是否为 jenkins 生成 GitHub SSH 密钥? [y/N] " gen_ssh
-if [[ "${gen_ssh,,}" == "y" ]] && id jenkins &>/dev/null; then
+KEY_FILE="${JENKINS_SSH_DIR}/id_ed25519_github"
+
+if ! id jenkins &>/dev/null; then
+  warn "jenkins 用户不存在，无法生成 SSH 密钥。"
+  warn "请先执行: sudo bash scripts/04-jenkins-install.sh"
+  warn "安装 Jenkins 后再重新运行本脚本，或改用手动命令（见 docs/GITHUB_SSH_JENKINS.md）。"
+else
+  read -rp "是否为 jenkins 生成 GitHub SSH 密钥? [y/N] " gen_ssh
+  if [[ "${gen_ssh,,}" == "y" ]]; then
   mkdir -p "$JENKINS_SSH_DIR"
   chown jenkins:jenkins "$JENKINS_SSH_DIR"
   chmod 700 "$JENKINS_SSH_DIR"
@@ -96,13 +104,21 @@ if [[ "${gen_ssh,,}" == "y" ]] && id jenkins &>/dev/null; then
     sudo -u jenkins ssh-keygen -t ed25519 -C "${GITHUB_USER}@jenkins-ci" -f "$KEY_FILE" -N ""
     log "SSH 公钥已生成，请添加到 GitHub:"
     echo ""
+    echo "========== jenkins 公钥（复制整行到 GitHub）=========="
     cat "${KEY_FILE}.pub"
+    echo "===================================================="
     echo ""
+    echo "查看公钥命令: sudo cat /var/lib/jenkins/.ssh/id_ed25519_github.pub"
     echo "添加路径: GitHub → Settings → SSH and GPG keys → New SSH key"
     echo "Title: jenkins-$(hostname)"
   else
     log "密钥已存在: ${KEY_FILE}.pub"
+    echo ""
+    echo "========== jenkins 公钥（复制整行到 GitHub）=========="
     cat "${KEY_FILE}.pub"
+    echo "===================================================="
+    echo ""
+    echo "查看公钥命令: sudo cat /var/lib/jenkins/.ssh/id_ed25519_github.pub"
   fi
 
   # SSH config
@@ -120,6 +136,7 @@ EOF
 
   log "测试 SSH 连接（需先在 GitHub 添加公钥）..."
   sudo -u jenkins ssh -T git@github.com 2>&1 || true
+  fi
 fi
 
 log "Git / GitHub 服务器端配置完成"

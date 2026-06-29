@@ -394,18 +394,61 @@ ssh -T git@github.com
 
 #### 4.5.4 Jenkins 服务器 SSH 密钥
 
-Jenkins 以 `jenkins` 用户运行，需单独配置：
+> 📖 **详细逐步说明：[GITHUB_SSH_JENKINS.md](./GITHUB_SSH_JENKINS.md)**（含脚本交互说明、手动配置、权限、FAQ）
+
+**为什么 Windows 配了还要在服务器再配？**  
+Jenkins 以 **`jenkins` 系统用户** 运行，拉代码时用的是 `/var/lib/jenkins/.ssh/` 里的密钥，**不会**使用你 Windows 电脑上的密钥。
+
+**何时做：** 必须 **先** 执行完 `04-jenkins-install.sh`（创建 `jenkins` 用户），**再** 运行本脚本。
+
+若出现 `unknown user jenkins` 或公钥文件不存在 → 说明 Jenkins 还没装，先装 Jenkins。
+
+---
+
+**快速步骤：**
 
 ```bash
+cd /opt/enterprise/deploy
 sudo bash scripts/06-git-github-setup.sh
-# 选择 y 生成 jenkins SSH 密钥，将输出的公钥添加到 GitHub（Title: jenkins-server）
 ```
 
-验证：
+| 脚本提问 | 你输入 |
+|----------|--------|
+| Git 用户名 | `jenkins` 或回车 |
+| Git 邮箱 | `alexlishujia@gmail.com` |
+| 是否为 jenkins 生成 SSH 密钥? | **`y`** |
+| GitHub 用户名 | `alexlishujia-dev` |
+
+脚本会输出 **公钥**（以 `ssh-ed25519` 开头）→ 复制到：  
+**https://github.com/settings/keys → New SSH key**（Title: `jenkins-server`）
+
+**若脚本已跑完、需要再次查看公钥，在服务器执行：**
 
 ```bash
-sudo -u jenkins ssh -T git@github.com
+sudo cat /var/lib/jenkins/.ssh/id_ed25519_github.pub
 ```
+
+复制输出的 **整一行**，粘贴到 GitHub → Settings → SSH and GPG keys → New SSH key。
+
+**验证：**
+
+```bash
+# ① SSH 认证
+sudo -u jenkins ssh -T git@github.com
+# 期望：Hi alexlishujia-dev! You've successfully authenticated...
+
+# ② 能否访问仓库
+sudo -u jenkins git ls-remote git@github.com:alexlishujia-dev/enterprise.git
+# 期望：输出 commit hash 列表
+```
+
+**常见错误：**
+
+| 现象 | 处理 |
+|------|------|
+| `jenkins 用户不存在` | 先执行 `04-jenkins-install.sh` |
+| `Permission denied (publickey)` | 公钥加到 **SSH and GPG keys**，不是 Deploy keys |
+| 不想用 SSH | 改用 HTTPS + Token，见 [4.7 节](#47-使用-https--personal-access-token备选) |
 
 ---
 
@@ -848,30 +891,42 @@ sudo -u jenkins kubectl get ns
 
 ### 9.3 配置服务器 Git 与 GitHub（06 脚本）
 
-Jenkins 安装完成后，配置 Git 身份与 SSH 密钥：
+> 📖 **完整图文步骤：[GITHUB_SSH_JENKINS.md](./GITHUB_SSH_JENKINS.md)**
+
+Jenkins 安装完成后，为 **`jenkins` 用户** 单独配置 Git 和 SSH（与 Windows 上的密钥无关）：
 
 ```bash
-cd /opt/EnterprisePlatform/deploy
+cd /opt/enterprise/deploy
 sudo bash scripts/06-git-github-setup.sh
 ```
 
-按提示输入 Git 用户名、邮箱；若使用 SSH 克隆仓库，选择生成 jenkins SSH 密钥并将公钥添加到 GitHub（详见 [4.5 节](#45-配置-ssh-密钥推荐免密-pushpull)）。
+脚本交互要点：Git 邮箱 → 生成 SSH 选 **`y`** → 复制公钥到 **GitHub Settings → SSH and GPG keys**。
 
-验证 jenkins 能否访问仓库：
+验证：
 
 ```bash
-sudo -u jenkins git ls-remote git@github.com:YOUR_USERNAME/EnterprisePlatform.git
-# 或使用 HTTPS（需先在 Jenkins 配置 Token 凭据）
+sudo -u jenkins ssh -T git@github.com
+sudo -u jenkins git ls-remote git@github.com:alexlishujia-dev/enterprise.git
 ```
 
 ### 9.4 此步骤失败怎么办？
 
 | 错误现象 | 解决方法 |
 |----------|----------|
+| `NO_PUBKEY 7198F4B714ABFC68` | 运行修复脚本：`sudo bash scripts/04-jenkins-install-fix.sh` |
+| `Package 'jenkins' has no installation candidate` | 同上；或见下方手动修复命令 |
+| `jenkins.service does not exist` | Jenkins 未安装成功，先修复安装再 `systemctl enable` |
 | Jenkins 启动失败 | `sudo journalctl -u jenkins -n 50` 查看原因 |
 | 8080 无法访问 | `sudo ufw allow 8080`；云服务器检查安全组 |
 | `jenkins docker ps` 报 permission denied | `sudo usermod -aG docker jenkins && sudo systemctl restart jenkins` |
 | `jenkins kubectl` 报错 | 见 [15.2 节 Jenkins 访问 K8s](#152-jenkins-访问-k8s) |
+
+**一键修复 Jenkins 安装：**
+
+```bash
+cd /opt/enterprise/deploy
+sudo bash scripts/04-jenkins-install-fix.sh
+```
 
 ---
 

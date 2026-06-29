@@ -11,8 +11,10 @@ DEPLOY_DIR="$(dirname "$SCRIPT_DIR")"
 CONFIG_DIR="${DEPLOY_DIR}/configs"
 
 GREEN='\033[0;32m'
+RED='\033[0;31m'
 NC='\033[0m'
-log() { echo -e "${GREEN}[INFO]${NC} $*"; }
+log()  { echo -e "${GREEN}[INFO]${NC} $*"; }
+warn() { echo -e "${RED}[WARN]${NC} $*"; }
 
 [[ $EUID -eq 0 ]] || { echo "请使用 root 运行"; exit 1; }
 
@@ -24,11 +26,8 @@ export INSTALL_K3S_MIRROR=cn
 # 指定版本（稳定版）
 export INSTALL_K3S_VERSION="${INSTALL_K3S_VERSION:-v1.28.5+k3s1}"
 
-# 4GB 优化：限制 etcd 与 kube-apiserver 内存（K3s 内置 sqlite 更省资源）
-INSTALL_K3S_EXEC="${INSTALL_K3S_EXEC:---write-kubeconfig-mode 644 \
-  --disable traefik \
-  --kube-apiserver-arg=default-not-ready-toleration-seconds=30 \
-  --kube-apiserver-arg=default-unreachable-toleration-seconds=30}"
+# 4GB 优化；新版 K3s(1.32+) 参数有变化，使用最简稳定参数
+INSTALL_K3S_EXEC="${INSTALL_K3S_EXEC:---write-kubeconfig-mode 644}"
 
 if command -v k3s &>/dev/null; then
   log "K3s 已安装: $(k3s --version)"
@@ -40,8 +39,27 @@ fi
 # containerd 镜像加速
 log "配置 K3s registries.yaml..."
 mkdir -p /etc/rancher/k3s
+if [[ -f /etc/rancher/k3s/registries.yaml ]]; then
+  cp /etc/rancher/k3s/registries.yaml /etc/rancher/k3s/registries.yaml.bak.$(date +%Y%m%d%H%M%S)
+fi
 cp "${CONFIG_DIR}/registries.yaml" /etc/rancher/k3s/registries.yaml
-systemctl restart k3s
+# Windows 编辑过的文件可能是 CRLF，会导致 K3s 解析失败
+if command -v dos2unix &>/dev/null; then
+  dos2unix /etc/rancher/k3s/registries.yaml 2>/dev/null || true
+else
+  sed -i 's/\r$//' /etc/rancher/k3s/registries.yaml
+fi
+
+log "重启 K3s..."
+if ! systemctl restart k3s; then
+  warn "K3s 重启失败，尝试移除 registries.yaml 后再次启动..."
+  mv /etc/rancher/k3s/registries.yaml /etc/rancher/k3s/registries.yaml.failed
+  systemctl restart k3s || {
+    echo "K3s 仍无法启动，请执行: sudo journalctl -xeu k3s.service --no-pager | tail -50"
+    exit 1
+  }
+  warn "K3s 已在无镜像加速配置下启动，可稍后手动修复 registries.yaml"
+fi
 
 # kubectl 别名（root）
 if ! grep -q 'kubectl' /root/.bashrc 2>/dev/null; then
