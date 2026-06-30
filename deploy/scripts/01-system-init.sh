@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# 01-system-init.sh - Ubuntu 20.04 系统初始化（国内源、swap、防火墙、用户权限）
+# 01-system-init.sh - Ubuntu 20.04/22.04 系统初始化（国内源、swap、防火墙、用户权限）
 # 用法: sudo bash 01-system-init.sh
 # =============================================================================
 set -euo pipefail
@@ -18,13 +18,31 @@ warn() { echo -e "${RED}[WARN]${NC} $*"; }
 [[ $EUID -eq 0 ]] || { echo "请使用 root 运行: sudo bash $0"; exit 1; }
 
 # -----------------------------------------------------------------------------
-# 1. 更换 apt 为国内源
+# 1. 更换 apt 为国内源（按系统版本自动选择 focal / jammy）
 # -----------------------------------------------------------------------------
-log "配置阿里云 apt 源..."
-cp /etc/apt/sources.list /etc/apt/sources.list.bak.$(date +%Y%m%d) 2>/dev/null || true
-cp "${CONFIG_DIR}/apt-sources-cn.list" /etc/apt/sources.list
-apt-get update -y
-apt-get upgrade -y
+UBUNTU_CODENAME="$(lsb_release -sc 2>/dev/null || echo unknown)"
+case "${UBUNTU_CODENAME}" in
+  focal)  APT_SOURCES="${CONFIG_DIR}/apt-sources-cn.list" ;;
+  jammy)  APT_SOURCES="${CONFIG_DIR}/apt-sources-cn-jammy.list" ;;
+  *)
+    warn "未识别的 Ubuntu 版本: ${UBUNTU_CODENAME}，跳过替换 apt 源"
+    APT_SOURCES=""
+    ;;
+esac
+
+if [[ -n "${APT_SOURCES}" ]]; then
+  [[ -f "${APT_SOURCES}" ]] || { warn "缺少 ${APT_SOURCES}，跳过替换 apt 源"; APT_SOURCES=""; }
+fi
+
+if [[ -n "${APT_SOURCES}" ]]; then
+  log "配置阿里云 apt 源 (${UBUNTU_CODENAME})..."
+  cp /etc/apt/sources.list /etc/apt/sources.list.bak.$(date +%Y%m%d) 2>/dev/null || true
+  cp "${APT_SOURCES}" /etc/apt/sources.list
+  apt-get update -y
+  apt-get upgrade -y
+else
+  warn "请手动确认 /etc/apt/sources.list 与当前 Ubuntu 版本一致"
+fi
 
 # -----------------------------------------------------------------------------
 # 2. 基础工具与时区

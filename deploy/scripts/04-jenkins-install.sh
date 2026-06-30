@@ -55,10 +55,17 @@ else
   fi
 
   if ! apt-cache show jenkins &>/dev/null; then
-    err "仍找不到 jenkins 包，请运行: sudo bash scripts/04-jenkins-install-fix.sh"
+    echo "仍找不到 jenkins 包，请运行: sudo bash scripts/04-jenkins-install-fix.sh"
+    exit 1
   fi
 
-  apt-get install -y openjdk-11-jdk jenkins
+  JAVA_PKG=""
+  for pkg in openjdk-17-jre-headless openjdk-11-jre-headless openjdk-11-jdk; do
+    if apt-get install -y "${pkg}"; then JAVA_PKG="${pkg}"; break; fi
+  done
+  [[ -n "${JAVA_PKG}" ]] || warn "Java 将在安装 jenkins 时一并安装"
+
+  apt-get install -y jenkins
 
   # 4GB 机器限制 Jenkins 堆内存
   JENKINS_JAVA=/etc/default/jenkins

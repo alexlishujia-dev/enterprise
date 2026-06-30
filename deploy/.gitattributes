@@ -1,0 +1,10 @@
+# Shell 脚本强制 LF，避免 Linux 上 set: pipefail 报错
+*.sh text eol=lf
+
+# 文档可跨平台
+*.md text auto
+
+# YAML/JSON
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf

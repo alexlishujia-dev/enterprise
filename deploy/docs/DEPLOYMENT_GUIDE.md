@@ -1402,7 +1402,62 @@ grep JAVA_ARGS /etc/default/jenkins
 sudo k3s kubectl describe pod -n enterprise-platform
 ```
 
-### Q6：K3s 安装脚本下载失败
+### Q6：运行脚本报错 `set: pipefail: invalid option` 或 `: invalid option name`
+
+**原因**：脚本在 Windows 上编辑或 `git pull` 后带有 **CRLF（`\r\n`）** 换行，Linux 的 bash 会把 `\r` 当成命令的一部分。
+
+**立即修复**（在服务器上执行一次即可）：
+
+```bash
+cd /opt/enterprise/deploy
+sed -i 's/\r$//' scripts/*.sh
+sudo bash scripts/04-jenkins-install-fix.sh
+```
+
+**预防**：仓库已包含 `deploy/.gitattributes`（`*.sh text eol=lf`）。Windows 端提交并 push 后，新拉取的脚本会使用 LF。若仍有问题，可在服务器上再次运行上面的 `sed` 命令。
+
+### Q7：`apt` 报 `debianutils Breaks x11-common` / `libglx-mesa0` / `pkgProblemResolver::Resolve generated breaks`
+
+**原因**：最常见是 **Ubuntu 版本与 apt 源不匹配**。例如系统是 **22.04 (jammy)**，但 `01-system-init.sh` 写入了 **20.04 (focal)** 源，会导致依赖树冲突。
+
+**1. 确认系统版本：**
+
+```bash
+lsb_release -a
+grep -E 'focal|jammy' /etc/apt/sources.list
+```
+
+**2. 恢复正确的 22.04 源（阿里云镜像示例）：**
+
+```bash
+sudo cp /etc/apt/sources.list /etc/apt/sources.list.broken.bak
+sudo tee /etc/apt/sources.list << 'EOF'
+deb https://mirrors.aliyun.com/ubuntu/ jammy main restricted universe multiverse
+deb https://mirrors.aliyun.com/ubuntu/ jammy-security main restricted universe multiverse
+deb https://mirrors.aliyun.com/ubuntu/ jammy-updates main restricted universe multiverse
+deb https://mirrors.aliyun.com/ubuntu/ jammy-backports main restricted universe multiverse
+EOF
+```
+
+若系统是 20.04，把上面 `jammy` 全部改为 `focal`，或使用 `deploy/configs/apt-sources-cn.list`。
+
+**3. 修复损坏的包状态：**
+
+```bash
+sudo apt-get update
+sudo apt --fix-broken install -y
+sudo dpkg --configure -a
+```
+
+**4. 再安装 Jenkins：**
+
+```bash
+cd /opt/enterprise/deploy
+sed -i 's/\r$//' scripts/*.sh
+sudo bash scripts/04-jenkins-install-fix.sh
+```
+
+### Q8：K3s 安装脚本下载失败
 
 ```bash
 # 尝试备用安装源
@@ -1410,7 +1465,7 @@ export K3S_INSTALL_URL=https://get.k3s.io
 sudo -E bash scripts/03-k3s-install.sh
 ```
 
-### Q7：`git clone` 或 Jenkins Checkout 失败
+### Q9：`git clone` 或 Jenkins Checkout 失败
 
 ```bash
 # 1. 测试 GitHub 连通
@@ -1428,14 +1483,14 @@ sudo bash scripts/06-git-github-setup.sh
 
 常见原因：未添加 SSH 公钥、Token 过期、私有仓库未配置凭据、国内网络超时（改用 HTTPS + Token）。
 
-### Q8：push 时 `Permission denied (publickey)`
+### Q10：push 时 `Permission denied (publickey)`
 
 1. 确认公钥已添加到 GitHub → Settings → SSH and GPG keys
 2. Windows 检查 `%USERPROFILE%\.ssh\config` 中 Host github.com 配置
 3. 运行 `ssh-add -l` 确认密钥已加载
 4. 使用 HTTPS + Token 作为备选（见 [4.7 节](#47-使用-https--personal-access-token备选)）
 
-### Q9：如何完全卸载重装？
+### Q11：如何完全卸载重装？
 
 ```bash
 # 卸载 K3s
