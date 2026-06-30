@@ -15,6 +15,8 @@ err()  { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 
 [[ $EUID -eq 0 ]] || err "请使用 root 运行: sudo bash $0"
 
+JENKINS_KEYRING="/usr/share/keyrings/jenkins-keyring.gpg"
+
 jenkins_installed() {
   dpkg -l jenkins 2>/dev/null | grep -q '^ii[[:space:]]*jenkins' && \
     [[ -f /lib/systemd/system/jenkins.service || -f /usr/lib/systemd/system/jenkins.service ]]
@@ -45,13 +47,23 @@ install_java_runtime() {
 }
 
 fetch_latest_jenkins_deb_url() {
-  local base mirrors=(
-    "https://mirrors.tuna.tsinghua.edu.cn/jenkins/debian-stable/binary"
-    "https://pkg.jenkins.io/debian-stable/binary"
+  local ver base
+
+  # 清华镜像：deb 直接在 debian-stable/ 目录下（无 binary/ 子目录）
+  ver="$(curl -fsSL --connect-timeout 20 \
+    'https://mirrors.tuna.tsinghua.edu.cn/jenkins/debian-stable/' 2>/dev/null \
+    | grep -oE 'jenkins_[0-9]+\.[0-9]+\.[0-9]+_all\.deb' \
+    | sed 's/jenkins_//;s/_all\.deb//' \
+    | sort -t. -k1,1n -k2,2n -k3,3n | tail -1 || true)"
+  if [[ -n "${ver}" ]]; then
+    echo "https://mirrors.tuna.tsinghua.edu.cn/jenkins/debian-stable/jenkins_${ver}_all.deb"
+    return 0
+  fi
+
+  for base in \
+    "https://pkg.jenkins.io/debian-stable/binary" \
     "https://pkg.jenkins.io/debian/binary"
-  )
-  local base ver url
-  for base in "${mirrors[@]}"; do
+  do
     ver="$(curl -fsSL --connect-timeout 20 "${base}/Packages" 2>/dev/null \
       | awk '/^Package: jenkins$/{f=1} f&&/^Version:/{print $2; exit}' || true)"
     if [[ -n "${ver}" ]]; then
@@ -69,7 +81,7 @@ install_jenkins_deb() {
 
   if deb_url="$(fetch_latest_jenkins_deb_url)"; then
     log "下载 jenkins.deb: ${deb_url}"
-    if wget -O "${tmp_deb}" "${deb_url}"; then
+    if wget -q --show-progress -O "${tmp_deb}" "${deb_url}"; then
       dpkg -i "${tmp_deb}" || apt-get install -f -y
       rm -f "${tmp_deb}"
       jenkins_installed && return 0
@@ -77,14 +89,14 @@ install_jenkins_deb() {
     fi
   fi
 
-  warn "无法从 Packages 索引获取版本，尝试固定版本地址..."
+  warn "自动探测版本失败，尝试固定版本地址..."
   for deb_url in \
-    "https://mirrors.tuna.tsinghua.edu.cn/jenkins/debian-stable/binary/jenkins_2.479.3_all.deb" \
-    "https://pkg.jenkins.io/debian-stable/binary/jenkins_2.479.3_all.deb" \
-    "https://pkg.jenkins.io/debian/binary/jenkins_2.479.3_all.deb"
+    "https://mirrors.tuna.tsinghua.edu.cn/jenkins/debian-stable/jenkins_2.555.3_all.deb" \
+    "https://mirrors.tuna.tsinghua.edu.cn/jenkins/debian-stable/jenkins_2.541.3_all.deb" \
+    "https://pkg.jenkins.io/debian-stable/binary/jenkins_2.479.3_all.deb"
   do
     log "下载 jenkins.deb: ${deb_url}"
-    if wget -O "${tmp_deb}" "${deb_url}"; then
+    if wget -q --show-progress -O "${tmp_deb}" "${deb_url}"; then
       dpkg -i "${tmp_deb}" || apt-get install -f -y
       rm -f "${tmp_deb}"
       jenkins_installed && return 0
@@ -92,6 +104,38 @@ install_jenkins_deb() {
     warn "下载或安装失败: ${deb_url}"
   done
   return 1
+}
+
+import_jenkins_gpg() {
+  local key_url import_ok=false
+  rm -f "${JENKINS_KEYRING}"
+
+  for key_url in \
+    "https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key" \
+    "https://pkg.jenkins.io/debian/jenkins.io-2025.key" \
+    "https://pkg.jenkins.io/debian-stable/jenkins.io-2025.key"
+  do
+    log "尝试下载 GPG 密钥: ${key_url}"
+    rm -f "${JENKINS_KEYRING}"
+    if curl -fsSL --connect-timeout 30 "${key_url}" \
+      | gpg --batch --yes --dearmor -o "${JENKINS_KEYRING}" 2>/dev/null; then
+      if [[ -s "${JENKINS_KEYRING}" ]]; then
+        log "密钥导入成功: ${key_url}"
+        import_ok=true
+        break
+      fi
+    fi
+    warn "密钥下载失败: ${key_url}"
+  done
+
+  if [[ "${import_ok}" != "true" ]]; then
+    warn "在线密钥均失败，尝试 keyserver..."
+    rm -f "${JENKINS_KEYRING}"
+    gpg --batch --yes --keyserver keyserver.ubuntu.com --recv-keys 7198F4B714ABFC68
+    gpg --batch --yes --export 7198F4B714ABFC68 | gpg --batch --yes --dearmor -o "${JENKINS_KEYRING}"
+  fi
+
+  [[ -s "${JENKINS_KEYRING}" ]]
 }
 
 try_apt_install() {
@@ -103,8 +147,8 @@ try_apt_install() {
     warn "apt 源中找不到 jenkins 包: ${repo_url}"
     return 1
   fi
-  if apt-get install -y jenkins; then
-    jenkins_installed && return 0
+  if apt-get install -y jenkins && jenkins_installed; then
+    return 0
   fi
   warn "apt-get install jenkins 失败"
   return 1
@@ -120,47 +164,31 @@ else
   apt-get install -y gnupg ca-certificates curl wget lsb-release
   install_java_runtime
 
-  JENKINS_KEYRING="/usr/share/keyrings/jenkins-keyring.gpg"
-  log "2/6 清理旧 Jenkins 源..."
-  rm -f /etc/apt/sources.list.d/jenkins.list "${JENKINS_KEYRING}" 2>/dev/null || true
+  log "2/6 清理旧 Jenkins apt 源..."
+  rm -f /etc/apt/sources.list.d/jenkins.list 2>/dev/null || true
 
-  log "3/6 导入 Jenkins GPG 密钥..."
-  import_ok=false
-  for key_url in \
-    "https://mirrors.tuna.tsinghua.edu.cn/jenkins/jenkins.io-2023.key" \
-    "https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key" \
-    "https://pkg.jenkins.io/debian/jenkins.io-2025.key"
-  do
-    if curl -fsSL --connect-timeout 30 "${key_url}" | gpg --dearmor -o "${JENKINS_KEYRING}" 2>/dev/null; then
-      [[ -s "${JENKINS_KEYRING}" ]] && { log "密钥导入成功: ${key_url}"; import_ok=true; break; }
-    fi
-    warn "密钥下载失败: ${key_url}"
-  done
-  if [[ "${import_ok}" != "true" ]]; then
-    warn "尝试 keyserver 导入..."
-    gpg --keyserver keyserver.ubuntu.com --recv-keys 7198F4B714ABFC68
-    gpg --export 7198F4B714ABFC68 | gpg --dearmor -o "${JENKINS_KEYRING}"
-  fi
-  [[ -s "${JENKINS_KEYRING}" ]] || err "GPG 密钥导入失败"
-
-  log "4/6 安装 Jenkins（优先 .deb 直装，更可靠）..."
-  installed=false
+  log "3/6 安装 Jenkins（.deb 直装，无需 GPG）..."
   if install_jenkins_deb; then
     log ".deb 安装 Jenkins 成功"
-    installed=true
   else
-    warn ".deb 安装失败，尝试 apt 源..."
+    warn ".deb 安装失败，尝试 apt 源（需 GPG 密钥）..."
+    log "4/6 导入 Jenkins GPG 密钥..."
+    import_jenkins_gpg || err "GPG 密钥导入失败，请检查能否访问 pkg.jenkins.io 或 keyserver.ubuntu.com"
+    log "5/6 通过 apt 安装 Jenkins..."
     if try_apt_install "https://pkg.jenkins.io/debian-stable" || \
        try_apt_install "https://pkg.jenkins.io/debian"; then
       log "apt 安装 Jenkins 成功"
-      installed=true
+    else
+      err "Jenkins 安装失败。可手动执行:
+  wget -O /tmp/jenkins.deb https://mirrors.tuna.tsinghua.edu.cn/jenkins/debian-stable/jenkins_2.555.3_all.deb
+  sudo dpkg -i /tmp/jenkins.deb || sudo apt-get install -f -y"
     fi
   fi
 
-  jenkins_installed || err "Jenkins 仍未安装成功。请检查: curl -I https://pkg.jenkins.io 与 apt 源是否正常"
+  jenkins_installed || err "Jenkins 仍未安装成功"
 fi
 
-log "5/6 配置 JVM 内存（4GB 机器）..."
+log "配置 JVM 内存（4GB 机器）..."
 JENKINS_JAVA=/etc/default/jenkins
 if [[ -f "${JENKINS_JAVA}" ]]; then
   if grep -q '^JAVA_ARGS=' "${JENKINS_JAVA}"; then
