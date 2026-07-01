@@ -944,6 +944,22 @@ sudo bash scripts/04-jenkins-install-fix.sh
 2. 输入上一步获取的**初始管理员密码**
 3. 选择 **「安装推荐的插件」**（等待 5～15 分钟，取决于网络）
 
+> **插件安装失败（红叉）？** 多为国内访问官方更新中心超时。在服务器执行：
+>
+> ```bash
+> cd /opt/enterprise/deploy
+> sudo bash scripts/04-jenkins-plugin-mirror.sh
+> ```
+>
+> 然后回到浏览器点击 **「重试」**。仍失败可换华为镜像：
+>
+> ```bash
+> sudo JENKINS_UPDATE_MIRROR=https://mirrors.huaweicloud.com/jenkins/updates/update-center.json \
+>   bash scripts/04-jenkins-plugin-mirror.sh
+> ```
+>
+> 也可先点 **「继续」** 完成管理员创建，稍后在 **Manage Jenkins → Plugins** 中手动安装 Git、Pipeline 等插件。
+
 ### 10.2 额外安装插件
 
 进入 **Manage Jenkins → Plugins → Available plugins**，搜索并安装：
@@ -1456,6 +1472,33 @@ cd /opt/enterprise/deploy
 sed -i 's/\r$//' scripts/*.sh
 sudo bash scripts/04-jenkins-install-fix.sh
 ```
+
+### Q7b：Jenkins 已安装但 `jenkins.service failed` / 启动失败
+
+**原因**：**Jenkins 版本与 Java 版本不匹配**。例如 Jenkins **2.555.x** 需要 **Java 21+**，而系统只有 Java 11。
+
+**立即修复：**
+
+```bash
+sudo apt-get install -y openjdk-21-jre-headless
+echo 'JAVA_HOME="/usr/lib/jvm/java-21-openjdk-amd64"' | sudo tee -a /etc/default/jenkins
+# 若已有 JAVA_HOME 行，用 sed 覆盖:
+sudo sed -i 's|^JAVA_HOME=.*|JAVA_HOME="/usr/lib/jvm/java-21-openjdk-amd64"|' /etc/default/jenkins
+sudo systemctl restart jenkins
+sudo systemctl status jenkins
+```
+
+**查看详细错误：**
+
+```bash
+sudo journalctl -u jenkins.service -n 30 --no-pager
+```
+
+| Jenkins 版本 | 最低 Java |
+|-------------|-----------|
+| 2.555+      | Java 21   |
+| 2.462 ~ 2.554 | Java 17 |
+| 更早 LTS    | Java 11   |
 
 ### Q8：K3s 安装脚本下载失败
 

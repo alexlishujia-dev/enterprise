@@ -1,2 +1,19 @@
 超级管理员用户名密码
 --admin  Admin@123
+
+
+git config --global user.name "alexlee"
+git config --global user.email "alexlishujia@gmail.com"
+git config --global init.defaultBranch main
+git config --global core.autocrlf true
+
+
+ssh-keygen -t ed25519 -C "alexlishujia@gmail.com" -f "$env:USERPROFILE\.ssh\id_ed25519_github"
+
+sudo git clone https://github.com/alexlishujia-dev/enterprise.git
+
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM4OirX2StrtB1+LmjZacxux192/fFPO1RYwoQMA5c8z alexlishujia@gmail.com
+
+jenkin 
+初始化密码
+8616878340cd4d24883e1410a743a976

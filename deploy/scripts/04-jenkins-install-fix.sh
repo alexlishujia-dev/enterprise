@@ -31,19 +31,86 @@ check_apt_sources() {
 }
 
 install_java_runtime() {
+  local required_major="${1:-21}"
+  local current_major java_home
+
   if command -v java &>/dev/null; then
-    log "Java 已安装: $(java -version 2>&1 | head -1)"
-    return 0
-  fi
-  log "安装 Java 运行时..."
-  for pkg in openjdk-17-jre-headless openjdk-11-jre-headless; do
-    if apt-get install -y "${pkg}"; then
-      log "已安装 ${pkg}"
+    current_major="$(java -version 2>&1 | head -1 | sed -n 's/.*version "\([0-9]\+\).*/\1/p')"
+    if [[ -n "${current_major}" && "${current_major}" -ge "${required_major}" ]]; then
+      log "Java 已满足要求: $(java -version 2>&1 | head -1)"
+      configure_jenkins_java "${required_major}"
       return 0
     fi
-    warn "${pkg} 安装失败，尝试下一个..."
+    warn "当前 Java ${current_major:-未知}，Jenkins 需要 Java ${required_major}+"
+  fi
+
+  log "安装 Java ${required_major} 运行时..."
+  case "${required_major}" in
+    21) apt-get install -y openjdk-21-jre-headless ;;
+    17) apt-get install -y openjdk-17-jre-headless ;;
+    *)  apt-get install -y openjdk-11-jre-headless ;;
+  esac
+  configure_jenkins_java "${required_major}"
+}
+
+jenkins_deb_version() {
+  dpkg-query -W -f='${Version}' jenkins 2>/dev/null || echo "0"
+}
+
+java_required_for_jenkins() {
+  local ver="$1" minor
+  minor="$(echo "${ver}" | cut -d. -f2)"
+  if [[ "${minor}" -ge 555 ]]; then
+    echo 21
+  elif [[ "${minor}" -ge 462 ]]; then
+    echo 17
+  else
+    echo 11
+  fi
+}
+
+configure_jenkins_java() {
+  local required_major="${1:-21}" java_home=""
+  local d
+
+  for d in \
+    /usr/lib/jvm/java-"${required_major}"-openjdk-* \
+    /usr/lib/jvm/java-21-openjdk-* \
+    /usr/lib/jvm/java-17-openjdk-* \
+    /usr/lib/jvm/java-11-openjdk-*
+  do
+    if [[ -d "${d}" ]]; then
+      java_home="${d}"
+      break
+    fi
   done
-  warn "Java 未安装，将在安装 jenkins.deb 时自动拉取依赖"
+
+  [[ -n "${java_home}" ]] || { warn "未找到 JAVA_HOME，Jenkins 可能无法启动"; return 1; }
+
+  JENKINS_JAVA=/etc/default/jenkins
+  [[ -f "${JENKINS_JAVA}" ]] || touch "${JENKINS_JAVA}"
+  if grep -q '^JAVA_HOME=' "${JENKINS_JAVA}"; then
+    sed -i "s|^JAVA_HOME=.*|JAVA_HOME=\"${java_home}\"|" "${JENKINS_JAVA}"
+  else
+    echo "JAVA_HOME=\"${java_home}\"" >> "${JENKINS_JAVA}"
+  fi
+  log "已设置 JAVA_HOME=${java_home}"
+}
+
+configure_jenkins_plugin_mirror() {
+  local mirror_url="https://mirrors.tuna.tsinghua.edu.cn/jenkins/updates/update-center.json"
+  log "配置 Jenkins 插件国内镜像..."
+  mkdir -p /var/lib/jenkins/updates
+  cat > /var/lib/jenkins/hudson.model.UpdateCenter.xml << EOF
+<?xml version='1.1' encoding='UTF-8'?>
+<sites>
+  <site>
+    <id>default</id>
+    <url>${mirror_url}</url>
+  </site>
+</sites>
+EOF
+  chown jenkins:jenkins /var/lib/jenkins/hudson.model.UpdateCenter.xml
 }
 
 fetch_latest_jenkins_deb_url() {
@@ -155,14 +222,16 @@ try_apt_install() {
 }
 
 # ---------- 主流程 ----------
+REQUIRED_JAVA=21
+
 if jenkins_installed; then
-  log "Jenkins 已安装，跳过安装步骤"
+  log "Jenkins 已安装 ($(jenkins_deb_version))，检查 Java 版本..."
+  REQUIRED_JAVA="$(java_required_for_jenkins "$(jenkins_deb_version)")"
 else
   check_apt_sources
 
   log "1/6 安装基础依赖..."
   apt-get install -y gnupg ca-certificates curl wget lsb-release
-  install_java_runtime
 
   log "2/6 清理旧 Jenkins apt 源..."
   rm -f /etc/apt/sources.list.d/jenkins.list 2>/dev/null || true
@@ -186,22 +255,35 @@ else
   fi
 
   jenkins_installed || err "Jenkins 仍未安装成功"
+  REQUIRED_JAVA="$(java_required_for_jenkins "$(jenkins_deb_version)")"
 fi
 
-log "配置 JVM 内存（4GB 机器）..."
+log "安装/校验 Java ${REQUIRED_JAVA}（Jenkins $(jenkins_deb_version) 需要）..."
+install_java_runtime "${REQUIRED_JAVA}"
+
+log "配置 JVM 内存与国内插件镜像（4GB 机器）..."
+configure_jenkins_plugin_mirror
 JENKINS_JAVA=/etc/default/jenkins
+JAVA_ARGS='-Djava.awt.headless=true -Xmx512m -Xms256m -Dhudson.model.DownloadService.noSignatureCheck=true'
 if [[ -f "${JENKINS_JAVA}" ]]; then
   if grep -q '^JAVA_ARGS=' "${JENKINS_JAVA}"; then
-    sed -i 's/^JAVA_ARGS=.*/JAVA_ARGS="-Djava.awt.headless=true -Xmx512m -Xms256m"/' "${JENKINS_JAVA}"
+    sed -i "s|^JAVA_ARGS=.*|JAVA_ARGS=\"${JAVA_ARGS}\"|" "${JENKINS_JAVA}"
   else
-    echo 'JAVA_ARGS="-Djava.awt.headless=true -Xmx512m -Xms256m"' >> "${JENKINS_JAVA}"
+    echo "JAVA_ARGS=\"${JAVA_ARGS}\"" >> "${JENKINS_JAVA}"
   fi
 fi
 
 log "6/6 启动 Jenkins..."
 systemctl daemon-reload
 systemctl enable jenkins
-systemctl start jenkins
+if ! systemctl restart jenkins; then
+  warn "Jenkins 启动失败，最近日志:"
+  journalctl -u jenkins.service -n 20 --no-pager || true
+  err "Jenkins 未启动。常见原因: Java 版本不足（2.555+ 需 Java 21）。请执行:
+  sudo apt-get install -y openjdk-21-jre-headless
+  sudo sed -i 's|^JAVA_HOME=.*|JAVA_HOME=\"/usr/lib/jvm/java-21-openjdk-amd64\"|' /etc/default/jenkins
+  sudo systemctl restart jenkins"
+fi
 sleep 3
 systemctl status jenkins --no-pager || true
 
