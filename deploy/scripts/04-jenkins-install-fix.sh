@@ -98,8 +98,22 @@ configure_jenkins_java() {
 }
 
 configure_jenkins_plugin_mirror() {
-  local mirror_url="https://mirrors.tuna.tsinghua.edu.cn/jenkins/updates/update-center.json"
-  log "配置 Jenkins 插件国内镜像..."
+  local mirror_url=""
+  for mirror_url in \
+    "https://updates.jenkins-zh.cn/update-center.json" \
+    "https://mirrors.huaweicloud.com/jenkins/update-center.json" \
+    "https://cdn.jsdelivr.net/gh/lework/jenkins-update-center/updates/huawei/update-center.json"
+  do
+    if curl -fsSL --connect-timeout 15 -r 0-1023 "${mirror_url}" >/dev/null 2>&1; then
+      log "插件镜像可用: ${mirror_url}"
+      break
+    fi
+    warn "插件镜像不可用: ${mirror_url}"
+    mirror_url=""
+  done
+  [[ -n "${mirror_url}" ]] || mirror_url="https://updates.jenkins-zh.cn/update-center.json"
+
+  log "配置 Jenkins 插件更新中心: ${mirror_url}"
   mkdir -p /var/lib/jenkins/updates
   cat > /var/lib/jenkins/hudson.model.UpdateCenter.xml << EOF
 <?xml version='1.1' encoding='UTF-8'?>
@@ -111,6 +125,7 @@ configure_jenkins_plugin_mirror() {
 </sites>
 EOF
   chown jenkins:jenkins /var/lib/jenkins/hudson.model.UpdateCenter.xml
+  rm -rf /var/lib/jenkins/updates/default.json /var/lib/jenkins/updates/*.json 2>/dev/null || true
 }
 
 fetch_latest_jenkins_deb_url() {

@@ -944,21 +944,28 @@ sudo bash scripts/04-jenkins-install-fix.sh
 2. 输入上一步获取的**初始管理员密码**
 3. 选择 **「安装推荐的插件」**（等待 5～15 分钟，取决于网络）
 
-> **插件安装失败（红叉）？** 多为国内访问官方更新中心超时。在服务器执行：
+> **插件安装失败 / 离线 / 404？** 清华 `.../jenkins/updates/update-center.json` **已下线**。在服务器执行：
 >
 > ```bash
 > cd /opt/enterprise/deploy
 > sudo bash scripts/04-jenkins-plugin-mirror.sh
 > ```
 >
-> 然后回到浏览器点击 **「重试」**。仍失败可换华为镜像：
+> 脚本会自动选用可用镜像（Jenkins 中文社区 / 华为 / jsDelivr）。手动指定：
 >
 > ```bash
-> sudo JENKINS_UPDATE_MIRROR=https://mirrors.huaweicloud.com/jenkins/updates/update-center.json \
+> sudo JENKINS_UPDATE_MIRROR=https://updates.jenkins-zh.cn/update-center.json \
 >   bash scripts/04-jenkins-plugin-mirror.sh
 > ```
 >
-> 也可先点 **「继续」** 完成管理员创建，稍后在 **Manage Jenkins → Plugins** 中手动安装 Git、Pipeline 等插件。
+> 验证镜像（应返回 200，不是 404）：
+>
+> ```bash
+> curl -I https://updates.jenkins-zh.cn/update-center.json
+> curl -I https://mirrors.huaweicloud.com/jenkins/update-center.json
+> ```
+>
+> 然后浏览器点 **「跳过插件安装」** 完成管理员创建，再在 **Manage Jenkins → Plugins** 中安装 Git、Pipeline 等。
 
 ### 10.2 额外安装插件
 

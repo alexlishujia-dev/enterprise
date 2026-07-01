@@ -77,18 +77,23 @@ else
     fi
   fi
 
-  # 国内插件更新中心（清华镜像）
+  # 国内插件更新中心（清华 updates/ 路径已 404，改用社区/华为镜像）
   mkdir -p /var/lib/jenkins/updates
   cat > /var/lib/jenkins/hudson.model.UpdateCenter.xml << 'EOF'
 <?xml version='1.1' encoding='UTF-8'?>
 <sites>
   <site>
     <id>default</id>
-    <url>https://mirrors.tuna.tsinghua.edu.cn/jenkins/updates/update-center.json</url>
+    <url>https://updates.jenkins-zh.cn/update-center.json</url>
   </site>
 </sites>
 EOF
   chown jenkins:jenkins /var/lib/jenkins/hudson.model.UpdateCenter.xml
+
+  # 国产镜像需关闭签名校验
+  if grep -q '^JAVA_ARGS=' "$JENKINS_JAVA" 2>/dev/null; then
+    sed -i 's/^JAVA_ARGS=.*/JAVA_ARGS="-Djava.awt.headless=true -Xmx512m -Xms256m -Dhudson.model.DownloadService.noSignatureCheck=true"/' "$JENKINS_JAVA"
+  fi
 
   systemctl enable jenkins
   systemctl start jenkins
